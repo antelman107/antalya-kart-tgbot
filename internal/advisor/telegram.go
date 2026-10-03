@@ -5,13 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
 
-const telegramAPI = "https://api.telegram.org"
+var telegramAPI = "https://api.telegram.org"
 
 // TelegramClient talks to the Bot API. The token stays in memory and is not logged.
 type TelegramClient struct {
@@ -42,15 +44,22 @@ func (c *TelegramClient) SetWebhook(ctx context.Context, publicURL string) error
 func (c *TelegramClient) SendText(ctx context.Context, chatID int64, replyTo int, text string) error {
 	for _, chunk := range splitTelegramText(text) {
 		payload := map[string]any{
-			"chat_id": chatID,
-			"text":    chunk,
+			"chat_id":    chatID,
+			"text":       chunk,
+			"parse_mode": "HTML",
 		}
 		if replyTo != 0 {
 			payload["reply_parameters"] = map[string]any{"message_id": replyTo}
 			replyTo = 0
 		}
 		if err := c.call(ctx, "sendMessage", payload, nil); err != nil {
-			return err
+			if !isHTMLParseError(err) {
+				return err
+			}
+			delete(payload, "parse_mode")
+			if err := c.call(ctx, "sendMessage", payload, nil); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -91,20 +100,20 @@ func (c *TelegramClient) call(ctx context.Context, method string, payload any, o
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("telegram %s failed: %s", method, resp.Status)
-	}
 	var envelope struct {
 		OK          bool            `json:"ok"`
 		Description string          `json:"description"`
 		Result      json.RawMessage `json:"result"`
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("telegram %s failed: %s", method, resp.Status)
+		}
 		return fmt.Errorf("telegram %s returned invalid json", method)
 	}
-	if !envelope.OK {
+	if resp.StatusCode != http.StatusOK || !envelope.OK {
 		if envelope.Description == "" {
-			envelope.Description = "unknown error"
+			envelope.Description = resp.Status
 		}
 		return fmt.Errorf("telegram %s rejected the call: %s", method, envelope.Description)
 	}
@@ -116,6 +125,36 @@ func (c *TelegramClient) call(ctx context.Context, method string, payload any, o
 
 func (c *TelegramClient) methodURL(method string) string {
 	return telegramAPI + "/bot" + c.token + "/" + method
+}
+
+var (
+	telegramTagPattern = regexp.MustCompile(`</?(?:b|strong|i|em|u|ins|s|strike|del|code|pre|a|blockquote|tg-spoiler)\b`)
+	markdownBold       = regexp.MustCompile(`\*\*([^*\n]+)\*\*`)
+	markdownCode       = regexp.MustCompile("`([^`\n]+)`")
+	markdownList       = regexp.MustCompile(`(?m)^[ \t]*[*\-][ \t]+`)
+)
+
+// telegramHTML turns a model reply into Telegram HTML.
+// A reply that already uses the allowed tags is kept. Markdown is converted,
+// and plain text is escaped so parse_mode HTML does not reject it.
+func telegramHTML(text string) string {
+	text = strings.TrimSpace(text)
+	if text == "" || telegramTagPattern.MatchString(text) {
+		return text
+	}
+	escaped := html.EscapeString(text)
+	escaped = markdownList.ReplaceAllString(escaped, "• ")
+	escaped = markdownBold.ReplaceAllString(escaped, "<b>$1</b>")
+	escaped = markdownCode.ReplaceAllString(escaped, "<code>$1</code>")
+	return escaped
+}
+
+func isHTMLParseError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "can't parse entities") || strings.Contains(msg, "cant parse entities")
 }
 
 func splitTelegramText(text string) []string {
