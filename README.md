@@ -1,8 +1,6 @@
 # AntalyaKart Telegram advisor
 
-`antalyakart-advisor` is the Telegram bot `@antalyakart_advisor_bot`. It answers questions about public buses in Antalya with a Google ADK for Go agent (`LlmAgent` and `Runner`, at most six model rounds) and the AntalyaKart transit tools. After deploy, Telegram posts updates to `https://mcp.goturkey.club/antalyakart-advisor/webhook`.
-
-Transit data comes from the same API as [online.antalyakart.com.tr](https://online.antalyakart.com.tr/#/home).
+`antalyakart-advisor` is the Telegram bot `@antalyakart_advisor_bot`. It answers questions about public buses in Antalya with a Google ADK for Go agent (`LlmAgent` and `Runner`, at most six model rounds). Transit tools come from the AntalyaKart MCP server, not from a built-in HTTP client. After deploy, Telegram posts updates to `https://mcp.goturkey.club/antalyakart-advisor/webhook`.
 
 Chat history is one JSON file, a map of chat id to messages. The default name is `chat-history.json` next to the executable, so the process can be started from another directory. `CHAT_HISTORY_PATH` overrides it; a relative value is still resolved from the executable directory.
 
@@ -24,14 +22,13 @@ The binary listens on `127.0.0.1:8091`. `GET /healthz` returns `ok`.
 | `BOT_ADDR` | no | `127.0.0.1:8091` |
 | `BOT_PATH` | no | `/antalyakart-advisor` |
 | `CHAT_HISTORY_PATH` | no | `chat-history.json` beside the executable |
-| `ANTALYAKART_BASE_URL` | no | `https://service.kentkart.com/rl1` |
-| `ANTALYAKART_REGION` | no | `026` |
-| `ANTALYAKART_LANG` | no | `tr` |
-| `ANTALYAKART_AUTH_TYPE` | no | `4` |
+| `ANTALYAKART_MCP_URL` | no | `http://127.0.0.1:8090/antalyakart` |
 
 Put the token and API key in a gitignored env file or in the server env. `.env.example` lists the names. Deploy writes `/var/www/mcp/antalyakart-advisor.env` from GitHub Actions secrets `TELEGRAM_BOT_TOKEN` and `GOOGLE_API_KEY`, using SSH secrets `TR_SSH_KEY`, `TR_SSH_USER`, and `TR_SSH_PORT` (`.github/workflows/deploy-advisor.yml`).
 
 ## Tools
+
+The agent loads these tools from the MCP endpoint (`ANTALYAKART_MCP_URL`). On the server that is the local `antalyakart-mcp` process. The public URL of the same server is `https://mcp.goturkey.club/antalyakart`.
 
 - `search_routes_and_stops` — routes, stops, and places by keyword
 - `nearby_places_stops_and_kiosks` — places, stops, and card top-up points near a coordinate

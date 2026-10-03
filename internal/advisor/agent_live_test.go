@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/antelman107/antalya-kart-tgbot/internal/antalyakart"
 )
 
 func TestLiveGeminiKey(t *testing.T) {
@@ -18,7 +16,11 @@ func TestLiveGeminiKey(t *testing.T) {
 	if key == "" {
 		t.Fatal("GOOGLE_API_KEY is required")
 	}
-	agent, err := NewAgent(t.Context(), key, os.Getenv("GEMINI_MODEL"), antalyakart.NewClient("", "", "", ""))
+	mcpURL := os.Getenv("ANTALYAKART_MCP_URL")
+	if mcpURL == "" {
+		mcpURL = DefaultMCPURL
+	}
+	agent, err := NewAgent(t.Context(), key, os.Getenv("GEMINI_MODEL"), mcpURL)
 	if err != nil {
 		t.Fatal(redactLive(err, key))
 	}
