@@ -136,6 +136,8 @@ func (b *Bot) process(update telegramUpdate) {
 		if err != nil {
 			b.logErr("agent", err)
 			reply = failReply
+		} else {
+			reply = telegramHTML(reply)
 		}
 	}
 	if _, err := b.store.Append(chatKey, "assistant", reply); err != nil {
