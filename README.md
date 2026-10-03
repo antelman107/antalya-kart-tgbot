@@ -22,13 +22,13 @@ The binary listens on `127.0.0.1:8091`. `GET /healthz` returns `ok`.
 | `BOT_ADDR` | no | `127.0.0.1:8091` |
 | `BOT_PATH` | no | `/antalyakart-advisor` |
 | `CHAT_HISTORY_PATH` | no | `chat-history.json` beside the executable |
-| `ANTALYAKART_MCP_URL` | no | `http://127.0.0.1:8090/antalyakart` |
+| `ANTALYAKART_MCP_URL` | no | `https://mcp.goturkey.club/antalyakart` |
 
 Put the token and API key in a gitignored env file or in the server env. `.env.example` lists the names. Deploy writes `/var/www/mcp/antalyakart-advisor.env` from GitHub Actions secrets `TELEGRAM_BOT_TOKEN` and `GOOGLE_API_KEY`, using SSH secrets `TR_SSH_KEY`, `TR_SSH_USER`, and `TR_SSH_PORT` (`.github/workflows/deploy-advisor.yml`).
 
 ## Tools
 
-The agent loads these tools from the MCP endpoint (`ANTALYAKART_MCP_URL`). On the server that is the local `antalyakart-mcp` process. The public URL of the same server is `https://mcp.goturkey.club/antalyakart`.
+The agent loads these tools from the public MCP endpoint `https://mcp.goturkey.club/antalyakart` (`ANTALYAKART_MCP_URL`).
 
 - `search_routes_and_stops` — routes, stops, and places by keyword
 - `nearby_places_stops_and_kiosks` — places, stops, and card top-up points near a coordinate

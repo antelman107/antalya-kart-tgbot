@@ -24,8 +24,8 @@ const (
 	maxGenerateRounds  = 6
 	maxPromptMessages  = 40
 	defaultGeminiModel = "gemini-flash-latest"
-	// DefaultMCPURL is the AntalyaKart MCP on the same host as this bot.
-	DefaultMCPURL = "http://127.0.0.1:8090/antalyakart"
+	// DefaultMCPURL is the public AntalyaKart MCP endpoint.
+	DefaultMCPURL = "https://mcp.goturkey.club/antalyakart"
 )
 
 const agentInstruction = `You are the AntalyaKart advisor, a Telegram assistant for public buses in Antalya.
