@@ -13,7 +13,6 @@ on:
     paths:
       - "cmd/antalyakart-advisor/**"
       - "internal/advisor/**"
-      - "internal/antalyakart/**"
       - "deploy/antalyakart-advisor.service"
       - "deploy/Caddyfile"
       - "go.mod"
@@ -59,6 +58,7 @@ jobs:
               "WEBHOOK_URL=https://mcp.goturkey.club/antalyakart-advisor/webhook",
               "BOT_ADDR=127.0.0.1:8091",
               "GEMINI_MODEL=gemini-flash-latest",
+              "ANTALYAKART_MCP_URL=http://127.0.0.1:8090/antalyakart",
           ]
           Path("advisor.env").write_text("\n".join(lines) + "\n")
           PY

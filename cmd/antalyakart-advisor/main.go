@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/antelman107/antalya-kart-tgbot/internal/advisor"
-	"github.com/antelman107/antalya-kart-tgbot/internal/antalyakart"
 )
 
 func main() {
@@ -33,13 +32,12 @@ func main() {
 		log.Fatalf("load history: %v", err)
 	}
 
-	transit := antalyakart.NewClient(
-		envOrDefault("ANTALYAKART_BASE_URL", antalyakart.DefaultBaseURL),
-		envOrDefault("ANTALYAKART_REGION", antalyakart.DefaultRegion),
-		envOrDefault("ANTALYAKART_LANG", antalyakart.DefaultLang),
-		envOrDefault("ANTALYAKART_AUTH_TYPE", antalyakart.DefaultAuthType),
+	agent, err := advisor.NewAgent(
+		context.Background(),
+		apiKey,
+		os.Getenv("GEMINI_MODEL"),
+		envOrDefault("ANTALYAKART_MCP_URL", advisor.DefaultMCPURL),
 	)
-	agent, err := advisor.NewAgent(context.Background(), apiKey, os.Getenv("GEMINI_MODEL"), transit)
 	if err != nil {
 		log.Fatalf("agent: %s", redact(err.Error(), token, apiKey))
 	}

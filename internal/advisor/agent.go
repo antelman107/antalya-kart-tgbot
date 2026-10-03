@@ -14,9 +14,9 @@ import (
 	"google.golang.org/adk/v2/model/gemini"
 	"google.golang.org/adk/v2/runner"
 	"google.golang.org/adk/v2/session"
+	"google.golang.org/adk/v2/tool"
+	"google.golang.org/adk/v2/tool/mcptoolset"
 	"google.golang.org/genai"
-
-	"github.com/antelman107/antalya-kart-tgbot/internal/antalyakart"
 )
 
 const (
@@ -24,11 +24,13 @@ const (
 	maxGenerateRounds  = 6
 	maxPromptMessages  = 40
 	defaultGeminiModel = "gemini-flash-latest"
+	// DefaultMCPURL is the AntalyaKart MCP on the same host as this bot.
+	DefaultMCPURL = "http://127.0.0.1:8090/antalyakart"
 )
 
 const agentInstruction = `You are the AntalyaKart advisor, a Telegram assistant for public buses in Antalya.
 Reply in the same language the user writes.
-Use the transit tools for routes, stops, arrivals, and trip plans. Do not invent stop ids, ETAs, or route numbers.
+Use the AntalyaKart MCP tools for routes, stops, arrivals, and trip plans. Do not invent stop ids, ETAs, or route numbers.
 If a tool fails, say what failed and ask for a clearer stop or route.
 Keep answers short enough for a chat message.
 
@@ -52,7 +54,7 @@ type Agent struct {
 	rounds   *roundCap
 }
 
-func NewAgent(ctx context.Context, apiKey, modelName string, transit *antalyakart.Client) (*Agent, error) {
+func NewAgent(ctx context.Context, apiKey, modelName, mcpURL string) (*Agent, error) {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {
 		return nil, fmt.Errorf("GOOGLE_API_KEY is required")
@@ -61,12 +63,16 @@ func NewAgent(ctx context.Context, apiKey, modelName string, transit *antalyakar
 	if modelName == "" {
 		modelName = defaultGeminiModel
 	}
+	mcpURL = strings.TrimSpace(mcpURL)
+	if mcpURL == "" {
+		return nil, fmt.Errorf("ANTALYAKART_MCP_URL is required")
+	}
 
 	llm, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{APIKey: apiKey})
 	if err != nil {
 		return nil, err
 	}
-	tools, err := transitTools(transit)
+	transit, err := mcptoolset.New(mcptoolset.Config{Endpoint: mcpURL})
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +82,7 @@ func NewAgent(ctx context.Context, apiKey, modelName string, transit *antalyakar
 		Model:                llm,
 		Description:          "Answers questions about Antalya public buses.",
 		Instruction:          agentInstruction,
-		Tools:                tools,
+		Toolsets:             []tool.Toolset{transit},
 		BeforeModelCallbacks: []llmagent.BeforeModelCallback{rounds.before},
 		AfterAgentCallbacks:  []agent.AfterAgentCallback{rounds.after},
 	})
